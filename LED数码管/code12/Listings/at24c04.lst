@@ -1,0 +1,165 @@
+C51 COMPILER V9.56.0.0   AT24C04                                                           05/22/2022 09:18:49 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE AT24C04
+OBJECT MODULE PLACED IN .\Objects\at24c04.obj
+COMPILER INVOKED BY: D:\software_install\Keil_v5\C51\BIN\C51.EXE at24c04.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEX
+                    -TEND PRINT(.\Listings\at24c04.lst) TABS(2) OBJECT(.\Objects\at24c04.obj)
+
+line level    source
+
+   1          #include <stc8.h>
+   2          #include <intrins.h>
+   3          #include <at24c04.h>
+   4          #define AT24_add 0xA0//1010 0000 1010 0001
+   5          
+   6          sbit SDA=P7^6;
+   7          sbit SCL=P7^7;
+   8          void Delay5us()
+   9          {
+  10   1        unsigned char i;
+  11   1      
+  12   1        _nop_();
+  13   1        i = 11;
+  14   1        while (--i);
+  15   1      }
+  16          void I2C_Start()
+  17          {
+  18   1        SDA=1;
+  19   1        Delay5us();
+  20   1        SCL=1;
+  21   1        Delay5us();
+  22   1        SDA=0;
+  23   1        Delay5us();
+  24   1        
+  25   1      }
+  26          void I2C_Stop()
+  27          {
+  28   1        SDA=0;
+  29   1        Delay5us();
+  30   1        SCL=1;
+  31   1        Delay5us();
+  32   1        SDA=1;
+  33   1        Delay5us();
+  34   1      }
+  35          void I2C_WriteByte(unsigned char byt)
+  36          {
+  37   1        unsigned char i;
+  38   1        for(i=0;i<8;i++)
+  39   1        {
+  40   2          SCL=0;
+  41   2          Delay5us();
+  42   2          if(byt&0x80)
+  43   2          {
+  44   3            SDA=1;
+  45   3          }
+  46   2          else SDA=0;
+  47   2          Delay5us();
+  48   2          SCL=1;
+  49   2          Delay5us();
+  50   2          byt<<=1;
+  51   2        }
+  52   1        SCL=0;
+  53   1        Delay5us();
+  54   1      //  SDA=0;
+C51 COMPILER V9.56.0.0   AT24C04                                                           05/22/2022 09:18:49 PAGE 2   
+
+  55   1      //  Delay5us();
+  56   1      }
+  57          unsigned char I2C_ReadByte()
+  58          {
+  59   1        unsigned char da,i;
+  60   1        for(i=0;i<8;i++)
+  61   1        {
+  62   2          SCL=1;
+  63   2          Delay5us();
+  64   2          da<<=1;
+  65   2          if(SDA)da|=1;
+  66   2          SCL=0;
+  67   2          Delay5us();
+  68   2        }
+  69   1        return da;
+  70   1      }
+  71          bit I2C_CheckAck()
+  72          {
+  73   1        SCL=1;
+  74   1        Delay5us();
+  75   1        CY=SDA;
+  76   1        SCL=0;
+  77   1        Delay5us();
+  78   1        return CY;
+  79   1      }
+  80          //参数的顺序：首地址add，数据数组*s，字节数目count
+  81          bit Mult_Write24c04(unsigned char add,unsigned char *s,unsigned char count)
+  82          {
+  83   1        unsigned char i;
+  84   1        bit ack;
+  85   1        I2C_Start();
+  86   1        I2C_WriteByte(AT24_add);//发送器件地址+写
+  87   1        ack=I2C_CheckAck();
+  88   1        
+  89   1        I2C_WriteByte(add);//发送存储单元首地址
+  90   1        ack=I2C_CheckAck();
+  91   1        for(i=0;i<count;i++)
+  92   1        {
+  93   2          I2C_WriteByte(*s);
+  94   2          ack &= I2C_CheckAck();
+  95   2          s++;
+  96   2        }
+  97   1        I2C_Stop();
+  98   1        if(ack) return 1;
+  99   1        else return 0;
+ 100   1        
+ 101   1      }
+ 102          unsigned char read_24c04(unsigned char add)
+ 103          {
+ 104   1        unsigned char temp;
+ 105   1        bit ack;
+ 106   1        I2C_Start();
+ 107   1        I2C_WriteByte(AT24_add);//发送器件地址+伪写
+ 108   1        ack=I2C_CheckAck();
+ 109   1        
+ 110   1        I2C_WriteByte(add);//发送存储单元首地址
+ 111   1        ack=I2C_CheckAck();
+ 112   1        
+ 113   1        I2C_Start();
+ 114   1        I2C_WriteByte(AT24_add|0x01);//发送器件地址+读
+ 115   1        ack=I2C_CheckAck();
+ 116   1        
+C51 COMPILER V9.56.0.0   AT24C04                                                           05/22/2022 09:18:49 PAGE 3   
+
+ 117   1        temp=I2C_ReadByte();
+ 118   1        
+ 119   1        I2C_Stop();
+ 120   1        return temp;
+ 121   1      }
+ 122          void Mult_Read24c04(unsigned char add,unsigned char *str,unsigned char count)
+ 123          {
+ 124   1        unsigned char i;
+ 125   1        for(i=0;i<count;i++)
+ 126   1        {
+ 127   2          str[i]=read_24c04(add);
+ 128   2          add=add+0x01;
+ 129   2        }
+ 130   1      }
+ 131          
+ 132          
+ 133          
+ 134          
+ 135          
+ 136          
+ 137          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    295    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      11
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       2
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

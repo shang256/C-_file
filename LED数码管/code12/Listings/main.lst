@@ -1,0 +1,223 @@
+C51 COMPILER V9.56.0.0   MAIN                                                              05/24/2022 10:45:58 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\software_install\Keil_v5\C51\BIN\C51.EXE main.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEN
+                    -D PRINT(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <stc8.h>
+   2          #include <Hc595.h>
+   3          #include <Ds1302.h>
+   4          #include <stdio.h> //printf打印
+   5          #include <at24c04.h>
+   6          unsigned char cnt;
+   7          
+   8          bit REAAok;//开始接收标志,1表示开始接受，0表示未开始
+   9          bit RECCFinish; //结束标志 0表示结束了，1表示没结束
+  10          unsigned char ReNum;//接受数量
+  11          unsigned char Rebuffer[13];//接受缓冲区
+  12          unsigned char *p;
+  13          
+  14          unsigned char displayDat[7]={0x00};
+  15          extern unsigned char xdata sec,min,hour,day,month,year;
+  16          //秒、分、时、日、月、星期、年
+  17          unsigned char Timedata[7]={0x50,0x30,0x16,0x21,0x10,0x01,0x19};
+  18          unsigned char buf[8]={0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
+  19          
+  20          unsigned char Romdata[6]={255};
+  21          unsigned char device=5;//区分设备
+  22          unsigned char led_flag=0;
+  23          unsigned char display_flag=0;
+  24          unsigned char display_count=0;
+  25          unsigned char led_count=0;
+  26          void InitTime(){
+  27   1        displayDat[7]=sec%10;
+  28   1        displayDat[6]=sec/10;
+  29   1        displayDat[5]=min%10;
+  30   1        displayDat[4]=min/10;
+  31   1        displayDat[3]=hour%10;
+  32   1        displayDat[2]=hour/10;
+  33   1        displayDat[1]=day%10;
+  34   1        displayDat[0]=day/10;
+  35   1      }
+  36          void Timer0Init(void)   //5毫秒@11.0592MHz
+  37          {
+  38   1        AUXR |= 0x80;   //定时器时钟1T模式
+  39   1        TMOD &= 0xF0;   //设置定时器模式
+  40   1        TL0 = 0x00;   //设置定时初始值
+  41   1        TH0 = 0x28;   //设置定时初始值
+  42   1        TF0 = 0;    //清除TF0标志
+  43   1        TR0 = 1;    //定时器0开始计时
+  44   1        ET0=1;
+  45   1        EA=1;
+  46   1      }
+  47          void UartInit(void)   //115200bps@11.0592MHz
+  48          {
+  49   1        SCON = 0x50;    //8位数据,可变波特率
+  50   1        AUXR |= 0x40;   //定时器时钟1T模式
+  51   1        AUXR &= 0xFE;   //串口1选择定时器1为波特率发生器
+  52   1        TMOD &= 0x0F;   //设置定时器模式
+  53   1        TL1 = 0xE8;   //设置定时初始值
+  54   1        TH1 = 0xFF;   //设置定时初始值
+C51 COMPILER V9.56.0.0   MAIN                                                              05/24/2022 10:45:58 PAGE 2   
+
+  55   1        ET1 = 0;    //禁止定时器%d中断
+  56   1        TR1 = 1;    //定时器1开始计时
+  57   1        ES=1;
+  58   1      }
+  59          
+  60          void main(){
+  61   1        //REAAok=0;
+  62   1        RECCFinish=0;
+  63   1        ReNum=0;
+  64   1        *p=&Rebuffer;
+  65   1        cnt=0;
+  66   1        UartInit();
+  67   1        Timer0Init();
+  68   1        DS1302Reset();
+  69   1        //Write_DS1302Init(Timedata);
+  70   1      
+  71   1        while(1)
+  72   1        {
+  73   2          if(led_flag==0)
+  74   2          P6=~ReNum;
+  75   2          if(led_flag==1)
+  76   2          {
+  77   3          P6=~buf[led_count];
+  78   3          }
+  79   2          
+  80   2          DisplayScan();
+  81   2        }
+  82   1      }
+  83          
+  84          void UartSend(unsigned char ch){
+  85   1          SBUF=ch;
+  86   1          while(!TI);
+  87   1          TI=0;
+  88   1      }
+  89          char putchar(char c){
+  90   1        UartSend(c);
+  91   1        return c;
+  92   1      }
+  93          
+  94          
+  95          void Timer0_isr() interrupt 1
+  96          {
+  97   1          unsigned char val=0x00,i;
+  98   1          cnt++;
+  99   1      
+ 100   1          if(cnt==200){
+ 101   2            cnt=0;
+ 102   2      /////////////////////////////////////////////////////////////////////////////////////////////
+ 103   2            if(led_flag==1)
+ 104   2            {
+ 105   3              led_count++;
+ 106   3              if(led_count>7)
+ 107   3                led_count=0;
+ 108   3            }
+ 109   2            if(display_flag==0)
+ 110   2            InitTime();
+ 111   2            if(display_flag==1)//数码管流水
+ 112   2            {
+ 113   3              for(i=0;i<8;i++)
+ 114   3              {
+ 115   4                if(i!=display_count)
+ 116   4                  displayDat[i]=18;//不显示
+C51 COMPILER V9.56.0.0   MAIN                                                              05/24/2022 10:45:58 PAGE 3   
+
+ 117   4                else
+ 118   4                  displayDat[i]=19;//显示 -
+ 119   4              }
+ 120   3              
+ 121   3              display_count++;
+ 122   3              if(display_count>8) display_count=0;
+ 123   3            }
+ 124   2      /////////////////////////////////////////////////////////////////////////////////////////////
+ 125   2            Run_DS1302();//读取1302的时间
+ 126   2            Mult_Read24c04(val,Romdata,6);
+ 127   2            switch(device){
+ 128   3              case 1:{printf("Date is %02bd",year);
+ 129   4                      printf(".%02bd",month);
+ 130   4                      printf(".%02bd",day);
+ 131   4                      printf(",%02bd",hour);
+ 132   4                      printf(":%02bd",min);
+ 133   4                      printf(":%02bd",sec);
+ 134   4                      printf("\r\n"); 
+ 135   4              break;}
+ 136   3              case 2:{printf("EEPROM stores:");
+ 137   4              printf(":%02bu",Romdata[0]);
+ 138   4              printf(":%02bu",Romdata[1]);
+ 139   4              printf(":%02bu",Romdata[2]);
+ 140   4              printf(":%02bu",Romdata[3]);
+ 141   4              printf(":%02bu",Romdata[4]);
+ 142   4              printf(":%02bu",Romdata[5]);
+ 143   4              printf("\r\n");
+ 144   4                break;
+ 145   4              }
+ 146   3              default:{printf("no device command!\r\n");break;}
+ 147   3            }       
+ 148   2          }
+ 149   1          TF0=0;
+ 150   1      }
+ 151          void CommandProcess(unsigned char Array[]){
+ 152   1        unsigned char i;
+ 153   1        for(i=0;i<7;i++)
+ 154   1          {
+ 155   2            Timedata[i]=Array[i+1];
+ 156   2          }
+ 157   1        if(Array[0]==0x01){device=1;}
+ 158   1        if(Array[0]==0x02){device=2;}
+ 159   1        if(Array[0]==0x03){device=3;}
+ 160   1        if(Array[0]==0x04){device=4;}
+ 161   1      }
+ 162          void Serial_isr() interrupt 4
+ 163          {
+ 164   1          unsigned char temp,val;
+ 165   1          if(RI){
+ 166   2            RI=0;
+ 167   2            temp=SBUF;
+ 168   2            if(RECCFinish==0){//判断是否结束上一帧数据接受
+ 169   3              if(REAAok){//判断是否收到了起始字节
+ 170   4               Rebuffer[ReNum]=temp;
+ 171   4                if(ReNum>1&& Rebuffer[ReNum]==0x33 && Rebuffer[ReNum-1]==0xCC){//判断是否收到结束字符
+ 172   5                    RECCFinish=1;
+ 173   5                    CommandProcess(Rebuffer);
+ 174   5                  switch(device)
+ 175   5                  {
+ 176   6                    case 1:{Write_DS1302Init(Timedata);break;}
+ 177   6                    case 2:val=0x00;Mult_Write24c04(val,Timedata,6);break;
+ 178   6                    case 3:led_count=0;led_flag=!led_flag;break;
+C51 COMPILER V9.56.0.0   MAIN                                                              05/24/2022 10:45:58 PAGE 4   
+
+ 179   6                    case 4:display_flag=!display_flag;break;
+ 180   6                    default:{break;}
+ 181   6                  }
+ 182   5                    RECCFinish=0;
+ 183   5                    REAAok=0;         
+ 184   5                }
+ 185   4               ReNum++;       
+ 186   4              }
+ 187   3            if(!REAAok && temp==0xAA){//判断是否接受到起始字节
+ 188   4                REAAok=1;
+ 189   4                ReNum=0;      
+ 190   4              }     
+ 191   3            }   
+ 192   2          }
+ 193   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1004    ----
+   CONSTANT SIZE    =     81    ----
+   XDATA SIZE       =     51       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

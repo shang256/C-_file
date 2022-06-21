@@ -1,0 +1,50 @@
+C51 COMPILER V9.56.0.0   HC595                                                             05/24/2022 10:33:01 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE HC595
+OBJECT MODULE PLACED IN .\Objects\Hc595.obj
+COMPILER INVOKED BY: D:\software_install\Keil_v5\C51\BIN\C51.EXE Hc595.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTE
+                    -ND PRINT(.\Listings\Hc595.lst) TABS(2) OBJECT(.\Objects\Hc595.obj)
+
+line level    source
+
+   1          //595驱动文件
+   2          #include <Hc595.h>
+   3          ///0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F 段选                                                                   
+             -               18  19
+   4          unsigned char const LedData[]={0xc0,0xf9,0xa4,0xb0,0x99,0x92,0x82,0xf8,0x80,0x90,0x88,0x83,0xc6,0xa1,0x8e,
+             -0xff,0x00,0xf7,0xff,0xbf};
+   5          //位选
+   6          unsigned char const LedPos[]={0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
+   7          unsigned char display_index=0;
+   8          extern unsigned char displayDat[];
+   9          void SEG_HC595send(unsigned char x){
+  10   1        unsigned char i;
+  11   1        for(i=0;i<8;i++){
+  12   2        x<<=1;
+  13   2        SPI_DS=CY;
+  14   2        SPI_SHCP=1;
+  15   2        SPI_SHCP=0;
+  16   2        }
+  17   1      }
+  18          void DisplayScan(void){ 
+  19   1        SEG_HC595send(LedPos[display_index]);
+  20   1        SEG_HC595send(LedData[displayDat[display_index]]);
+  21   1        SPI_STCP=1;
+  22   1        SPI_STCP=0;
+  23   1        if(++display_index>=8)display_index=0;
+  24   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     82    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     29    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
