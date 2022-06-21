@@ -1,0 +1,5 @@
+".\Objects\main.obj",
+".\Objects\hc595.obj",
+".\Objects\key.obj" 
+TO ".\Objects\KeyDataSendtoUart" 
+PRINT(".\Listings\KeyDataSendtoUart.m51") RAMSIZE(256) 

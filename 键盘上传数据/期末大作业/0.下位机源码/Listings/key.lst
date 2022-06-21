@@ -1,0 +1,85 @@
+C51 COMPILER V9.56.0.0   KEY                                                               05/24/2022 17:15:51 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE KEY
+OBJECT MODULE PLACED IN .\Objects\key.obj
+COMPILER INVOKED BY: D:\software_install\Keil_v5\C51\BIN\C51.EXE key.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT
+                    -(.\Listings\key.lst) TABS(2) OBJECT(.\Objects\key.obj)
+
+line level    source
+
+   1          #include "key.h"
+*** WARNING C318 IN LINE 3 OF key.h: can't open file 'stc8a8k64s4a12.h'
+   2          #include <STC8.H>
+   3          
+   4          //按键延时消抖
+   5          void DelayKey(unsigned int xms)    // 晶振：11.0592MHz
+   6          {
+   7   1        unsigned char i, j,k;
+   8   1        for(k=xms; k>0; k--)
+   9   1        {
+  10   2          _nop_();
+  11   2          _nop_();
+  12   2          _nop_();
+  13   2          i = 11;
+  14   2          j = 190;
+  15   2          do
+  16   2          {
+  17   3            while (--j);
+  18   3          } while (--i);
+  19   2        }
+  20   1      }
+  21          
+  22          //按键扫描
+  23          unsigned char key_scan()
+  24          {
+  25   1        unsigned char keyvalue,num=0; //按键键值变量，按键计时变量
+  26   1        GPIO_KEY = 0xf0;                // 高四位为1，低四位为0
+  27   1        if(GPIO_KEY != 0xf0)      //检测是否有按键按下
+  28   1        {
+  29   2          DelayKey(10);             // 延时消抖
+  30   2          if(GPIO_KEY != 0xf0)    //再次检测
+  31   2          {
+  32   3            GPIO_KEY=0xf0;
+  33   3            switch(GPIO_KEY)
+  34   3            {
+  35   4              case 0xe0: keyvalue = 3;break;      // 第3列 确定矩阵按键被按下的位置是第几列
+  36   4              case 0xd0: keyvalue = 2;break;      //   2 (1101 0000)
+  37   4              case 0xb0: keyvalue = 1;break;    //   1
+  38   4              case 0x70: keyvalue = 0;break;    //   0
+  39   4            }
+  40   3            GPIO_KEY=0x0f;  //行列反转
+  41   3            //判断是否为第0行
+  42   3            if((GPIO_KEY != 0x0d)||(GPIO_KEY != 0x0b)||(GPIO_KEY != 0x07)){keyvalue = keyvalue;}//确定不是第123行
+  43   3            if(GPIO_KEY == 0x0d){keyvalue = keyvalue+4;}//第1行，加上4，”4“是第0行的四个按键
+  44   3            if(GPIO_KEY == 0x0b){keyvalue = keyvalue+8;}
+  45   3            if(GPIO_KEY == 0x07){keyvalue = keyvalue+12;}       
+  46   3            while((num<50)&&(GPIO_KEY!=0x0f))//按下停留等待最高0.5s
+  47   3            {
+  48   4              DelayKey(10);
+  49   4              num++;
+  50   4            }
+  51   3          }     
+  52   2        }
+  53   1        // 没有按键按下时，返回值为16
+C51 COMPILER V9.56.0.0   KEY                                                               05/24/2022 17:15:51 PAGE 2   
+
+  54   1        if(GPIO_KEY==0xF0){keyvalue = 16;}
+  55   1        return keyvalue;
+  56   1      }
+  57          
+  58          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    173    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

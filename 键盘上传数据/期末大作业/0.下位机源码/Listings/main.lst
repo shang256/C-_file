@@ -1,0 +1,113 @@
+C51 COMPILER V9.56.0.0   MAIN                                                              05/24/2022 17:19:51 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\software_install\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC8.H>
+   2          
+   3          #include <stdio.h> //printf打印
+   4          #include "hc595.h"
+   5          #include "key.h"
+*** WARNING C318 IN LINE 3 OF key.h: can't open file 'stc8a8k64s4a12.h'
+   6          #include "intrins.h"
+   7          
+   8          unsigned char key_val, key_Data;//key_val = 0xFF quan mie 用于数码管显示， key_Data用于清除SBUF发送标志
+   9          
+  10          void UartInit(void)   //115200bps@11.0592MHz
+  11          {
+  12   1        SCON = 0x50;    //8位数据,可变波特率
+  13   1        AUXR |= 0x40;   //定时器时钟1T模式
+  14   1        AUXR &= 0xFE;   //串口1选择定时器1为波特率发生器
+  15   1        TMOD &= 0x0F;   //设置定时器模式
+  16   1        TL1 = 0xE8;   //设置定时初始值
+  17   1        TH1 = 0xFF;   //设置定时初始值
+  18   1        ET1 = 0;    //禁止定时器%d中断
+  19   1        TR1 = 1;    //定时器1开始计时
+  20   1        
+  21   1        ES = 1;
+  22   1        EA = 1;
+  23   1      }
+  24          
+  25          void main()
+  26          {
+  27   1        unsigned char keyvalue; // keyvalue用于获取实时键值，
+  28   1        UartInit();
+  29   1        while(1)
+  30   1        {
+  31   2          keyvalue = key_scan();   // 矩阵键盘扫描，keyvalue存放返回值
+  32   2          if(keyvalue != 16)
+  33   2          {
+  34   3            key_val = keyvalue;  // 得到最近一次按下的键值
+  35   3          }
+  36   2          display(6,key_val/10);      // 这时显示的键值是你最近一次按下的键值 
+  37   2          display(7,key_val%10);      // 这时显示的键值是你最近一次按下的键值   
+  38   2          key_Data = keyvalue;
+  39   2          switch(key_Data)
+  40   2          {
+  41   3            case 0:printf("Key=0\r\n\r\n");break;
+  42   3            case 1:printf("Key=1\r\n\r\n");break;
+  43   3            case 2:printf("Key=2\r\n\r\n");break;
+  44   3            case 3:printf("Key=3\r\n\r\n");break;
+  45   3            case 4:printf("Key=4\r\n\r\n");break;
+  46   3            case 5:printf("Key=5\r\n\r\n");break;
+  47   3            case 6:printf("Key=6\r\n\r\n");break;
+  48   3            case 7:printf("Key=7\r\n\r\n");break;
+  49   3            case 8:printf("Key=8\r\n\r\n");break;
+  50   3            case 9:printf("Key=9\r\n\r\n");break;
+  51   3            case 10:printf("Key=10\r\n\r\n");break;
+  52   3            case 11:printf("Key=11\r\n\r\n");break;
+  53   3            case 12:printf("Key=12\r\n\r\n");break;
+C51 COMPILER V9.56.0.0   MAIN                                                              05/24/2022 17:19:51 PAGE 2   
+
+  54   3            case 13:printf("Key=13\r\n\r\n");break;
+  55   3            case 14:printf("Key=14\r\n\r\n");break;
+  56   3            case 15:printf("Key=15\r\n\r\n");break;
+  57   3          }   
+  58   2        }
+  59   1      }
+  60          
+  61          //重写printf
+  62          void UartSend(unsigned char ch){
+  63   1          SBUF=ch;
+  64   1          while(!TI);
+  65   1          TI=0;
+  66   1      }
+  67          char putchar(char c){
+  68   1        UartSend(c);
+  69   1        return c;
+  70   1      }
+  71          
+  72          
+  73          void Serial_isr() interrupt 4
+  74          {
+  75   1        unsigned char temp;
+  76   1        if(RI)
+  77   1        {
+  78   2          RI=0;
+  79   2          temp = SBUF;
+  80   2        }
+  81   1        if(TI)//单片机发送数据
+  82   1        {
+  83   2          key_Data = 16;
+  84   2          TI = 0;
+  85   2        }
+  86   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    301    ----
+   CONSTANT SIZE    =    166    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      2       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)
